@@ -61,5 +61,5 @@ jobs:
           if [ -f package.json ]; then
             npm test
           else
-            echo "No tests to run"
+            echo "No package.json found, no tests to run"
           fi
