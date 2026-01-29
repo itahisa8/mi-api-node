@@ -43,6 +43,9 @@ jobs:
             echo "No package.json found, skipping install"
           fi
 
+      - name: Run linter
+        run: npm run lint
+
       - name: Wait for MySQL to be ready
         run: |
           until mysql -h 127.0.0.1 -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} -e "SELECT 1"; do
@@ -62,4 +65,15 @@ jobs:
             npm test
           else
             echo "No package.json found, no tests to run"
+          fi
+
+      - name: Static Code Analysis (Lint)
+        run: |
+          if [ -f package.json ]; then
+            # Instalamos ESLint si no está
+            npm install eslint --save-dev
+            # Ejecutamos el análisis (ajusta según tus archivos .js)
+            npx eslint . --ext .js --fix-dry-run || echo "Linting detectó advertencias"
+          else
+            echo "Saltando Lint: No se encontró package.json"
           fi
