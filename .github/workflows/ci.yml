@@ -9,6 +9,12 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    # PASO 7.5: Matriz de versiones de Node
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20]
 
     services:
       mysql:
@@ -30,19 +36,17 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      # Usamos la versión de la matriz
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          if [ -f package.json ]; then
-            npm install
-          else
-            echo "No package.json found, skipping install"
-          fi
+        run: npm install
 
+      # PASO 7.1: Linter (Ahora usa el script de package.json)
       - name: Run linter
         run: npm run lint
 
@@ -53,27 +57,25 @@ jobs:
             sleep 3
           done
 
-      - name: Run tests
+      # PASO 5.5: Inicializar base de datos (Importante para los tests)
+      - name: Initialize database
+        run: |
+          mysql -h 127.0.0.1 -u ${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} ${{ secrets.DB_DATABASE }} < db/database.sql
+
+      # PASO 7.2: Tests con cobertura (Sustituye al anterior)
+      - name: Run tests with coverage
         env:
           DB_HOST: 127.0.0.1
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           DB_PORT: 3306
-        run: |
-          if [ -f package.json ]; then
-            npm test
-          else
-            echo "No package.json found, no tests to run"
-          fi
+        run: npm run test:coverage
 
-      - name: Static Code Analysis (Lint)
-        run: |
-          if [ -f package.json ]; then
-            # Instalamos ESLint si no está
-            npm install eslint --save-dev
-            # Ejecutamos el análisis (ajusta según tus archivos .js)
-            npx eslint . --ext .js --fix-dry-run || echo "Linting detectó advertencias"
-          else
-            echo "Saltando Lint: No se encontró package.json"
-          fi
+      # PASO 7.3: Subida de artefactos
+      - name: Upload coverage artifact
+        if: always() # Obligatorio: se sube aunque los tests fallen
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-node-${{ matrix.node-version }}
+          path: coverage/
