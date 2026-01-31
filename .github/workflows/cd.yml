@@ -1,0 +1,21 @@
+name: CD - Deployment
+
+on:
+  workflow_dispatch: # Permite la ejecución manual
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create Release Tag
+        run: |
+          git tag v1.0.${{ github.run_number }}
+          git push origin v1.0.${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Message
+        run: echo "Despliegue simulado finalizado con éxito"
